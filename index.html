@@ -1,0 +1,599 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sky Strip — Weather Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg-void:#0B1220;
+    --bg-panel:#121B30;
+    --bg-panel-hover:#16213B;
+    --line-indigo:#243252;
+    --twilight:#1B2A4A;
+    --coral:#FF8B5E;
+    --gold:#FFC857;
+    --sky-pale:#E8EEF5;
+    --mist:#8B9AB3;
+    --mist-dim:#5C6A85;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{
+    background:var(--bg-void);
+    color:var(--sky-pale);
+    font-family:'Inter', sans-serif;
+    min-height:100vh;
+    padding:32px 20px 60px;
+  }
+  .wrap{max-width:1180px; margin:0 auto;}
+
+  header{
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-end;
+    flex-wrap:wrap;
+    gap:16px;
+    margin-bottom:36px;
+    border-bottom:1px solid var(--line-indigo);
+    padding-bottom:20px;
+  }
+  .brand-eyebrow{
+    font-family:'JetBrains Mono', monospace;
+    font-size:11px;
+    letter-spacing:0.18em;
+    text-transform:uppercase;
+    color:var(--coral);
+    margin-bottom:8px;
+  }
+  h1{
+    font-family:'Space Grotesk', sans-serif;
+    font-weight:600;
+    font-size:32px;
+    letter-spacing:-0.01em;
+  }
+  .clock-local{
+    font-family:'JetBrains Mono', monospace;
+    font-size:13px;
+    color:var(--mist);
+    text-align:right;
+  }
+
+  .panels{
+    display:grid;
+    grid-template-columns:repeat(3, 1fr);
+    gap:20px;
+  }
+  @media (max-width:900px){
+    .panels{grid-template-columns:1fr;}
+  }
+
+  .panel{
+    background:var(--bg-panel);
+    border:1px solid var(--line-indigo);
+    border-radius:14px;
+    overflow:hidden;
+    display:flex;
+    flex-direction:column;
+    min-height:520px;
+  }
+
+  .panel-sky{
+    padding:22px 22px 18px;
+    position:relative;
+    transition:background 0.6s ease;
+  }
+
+  .panel-topline{
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-start;
+    margin-bottom:22px;
+  }
+
+  .city-slot{
+    display:flex;
+    flex-direction:column;
+    gap:4px;
+  }
+  .city-name{
+    font-family:'Space Grotesk', sans-serif;
+    font-size:19px;
+    font-weight:600;
+  }
+  .city-sub{
+    font-family:'JetBrains Mono', monospace;
+    font-size:11px;
+    color:rgba(232,238,245,0.65);
+    letter-spacing:0.04em;
+  }
+  .change-btn{
+    font-family:'JetBrains Mono', monospace;
+    font-size:10px;
+    letter-spacing:0.08em;
+    text-transform:uppercase;
+    background:rgba(0,0,0,0.25);
+    border:1px solid rgba(232,238,245,0.25);
+    color:var(--sky-pale);
+    padding:6px 10px;
+    border-radius:20px;
+    cursor:pointer;
+    white-space:nowrap;
+  }
+  .change-btn:hover{background:rgba(0,0,0,0.4);}
+
+  .now-row{
+    display:flex;
+    align-items:baseline;
+    gap:14px;
+    margin-bottom:6px;
+  }
+  .now-temp{
+    font-family:'JetBrains Mono', monospace;
+    font-weight:700;
+    font-size:56px;
+    line-height:1;
+  }
+  .now-icon{font-size:34px; line-height:1;}
+  .now-desc{
+    font-family:'Inter', sans-serif;
+    font-size:13px;
+    color:rgba(232,238,245,0.8);
+  }
+  .now-meta{
+    display:flex;
+    gap:16px;
+    margin-top:14px;
+    font-family:'JetBrains Mono', monospace;
+    font-size:11px;
+    color:rgba(232,238,245,0.7);
+  }
+  .now-meta span b{color:var(--sky-pale); font-weight:600;}
+
+  .hourly-section{
+    background:var(--bg-panel);
+    padding:18px 18px 22px;
+    flex:1;
+    display:flex;
+    flex-direction:column;
+  }
+  .hourly-label{
+    font-family:'JetBrains Mono', monospace;
+    font-size:10px;
+    letter-spacing:0.14em;
+    text-transform:uppercase;
+    color:var(--mist-dim);
+    margin-bottom:10px;
+  }
+  .graph-holder{margin-bottom:8px;}
+  svg{display:block; width:100%; height:auto;}
+
+  .hour-scroll{
+    display:flex;
+    overflow-x:auto;
+    gap:0;
+    scrollbar-width:thin;
+    scrollbar-color:var(--line-indigo) transparent;
+    padding-bottom:4px;
+    margin-top:6px;
+  }
+  .hour-scroll::-webkit-scrollbar{height:5px;}
+  .hour-scroll::-webkit-scrollbar-thumb{background:var(--line-indigo); border-radius:6px;}
+
+  .hour-item{
+    flex:0 0 auto;
+    width:52px;
+    text-align:center;
+    padding:6px 0;
+    border-right:1px solid rgba(255,255,255,0.03);
+  }
+  .hour-item.now{
+    background:rgba(255,139,94,0.08);
+    border-radius:6px;
+  }
+  .hour-time{
+    font-family:'JetBrains Mono', monospace;
+    font-size:10px;
+    color:var(--mist-dim);
+    margin-bottom:6px;
+  }
+  .hour-icon{font-size:16px; margin-bottom:6px;}
+  .hour-temp{
+    font-family:'JetBrains Mono', monospace;
+    font-size:12px;
+    font-weight:600;
+  }
+  .hour-precip{
+    font-family:'JetBrains Mono', monospace;
+    font-size:9px;
+    color:#6FA8D6;
+    margin-top:4px;
+  }
+
+  .status-msg{
+    font-family:'JetBrains Mono', monospace;
+    font-size:12px;
+    color:var(--mist);
+    padding:40px 20px;
+    text-align:center;
+  }
+
+  /* search overlay */
+  .search-overlay{
+    position:fixed;
+    inset:0;
+    background:rgba(6,10,20,0.7);
+    backdrop-filter:blur(3px);
+    display:none;
+    align-items:center;
+    justify-content:center;
+    z-index:50;
+    padding:20px;
+  }
+  .search-overlay.open{display:flex;}
+  .search-box{
+    background:var(--bg-panel);
+    border:1px solid var(--line-indigo);
+    border-radius:12px;
+    width:100%;
+    max-width:420px;
+    padding:20px;
+  }
+  .search-box h3{
+    font-family:'Space Grotesk', sans-serif;
+    font-size:16px;
+    margin-bottom:14px;
+    font-weight:600;
+  }
+  .search-box input{
+    width:100%;
+    background:var(--bg-void);
+    border:1px solid var(--line-indigo);
+    color:var(--sky-pale);
+    padding:10px 12px;
+    border-radius:8px;
+    font-family:'Inter', sans-serif;
+    font-size:14px;
+    margin-bottom:12px;
+  }
+  .search-box input:focus{outline:1px solid var(--coral);}
+  .search-results{max-height:260px; overflow-y:auto;}
+  .search-result{
+    padding:10px 12px;
+    border-radius:8px;
+    cursor:pointer;
+    font-size:13px;
+    display:flex;
+    justify-content:space-between;
+  }
+  .search-result:hover{background:var(--bg-panel-hover);}
+  .search-result-name{font-weight:500;}
+  .search-result-region{color:var(--mist-dim); font-size:11px;}
+  .search-close{
+    margin-top:14px;
+    width:100%;
+    background:transparent;
+    border:1px solid var(--line-indigo);
+    color:var(--mist);
+    padding:9px;
+    border-radius:8px;
+    cursor:pointer;
+    font-family:'JetBrains Mono', monospace;
+    font-size:11px;
+    letter-spacing:0.06em;
+    text-transform:uppercase;
+  }
+  .search-close:hover{color:var(--sky-pale); border-color:var(--mist);}
+
+  footer{
+    margin-top:30px;
+    text-align:center;
+    font-family:'JetBrains Mono', monospace;
+    font-size:10px;
+    color:var(--mist-dim);
+    letter-spacing:0.04em;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <div class="brand-eyebrow">◐ Weather Instrument panel</div>
+      <h1>Sky Strip</h1>
+    </div>
+    <div class="clock-local" id="fetchedAt"></div>
+  </header>
+
+  <div class="panels" id="panels"></div>
+
+  <footer>Data: Open-Meteo — updates on load · Click "Change" to swap a city</footer>
+</div>
+
+<div class="search-overlay" id="searchOverlay">
+  <div class="search-box">
+    <h3>Choose an Australian city or suburb</h3>
+    <input type="text" id="searchInput" placeholder="Search any AU city or suburb…" autocomplete="off">
+    <div class="search-results" id="searchResults"></div>
+    <button class="search-close" onclick="closeSearch()">Cancel</button>
+  </div>
+</div>
+
+<script>
+const WEATHER_ICONS = {
+  0:'☀️',1:'🌤️',2:'⛅',3:'☁️',
+  45:'🌫️',48:'🌫️',
+  51:'🌦️',53:'🌦️',55:'🌦️',
+  56:'🌧️',57:'🌧️',
+  61:'🌧️',63:'🌧️',65:'🌧️',
+  66:'🌧️',67:'🌧️',
+  71:'🌨️',73:'🌨️',75:'🌨️',77:'🌨️',
+  80:'🌦️',81:'🌧️',82:'⛈️',
+  85:'🌨️',86:'🌨️',
+  95:'⛈️',96:'⛈️',99:'⛈️'
+};
+const WEATHER_DESC = {
+  0:'Clear sky',1:'Mostly clear',2:'Partly cloudy',3:'Overcast',
+  45:'Fog',48:'Rime fog',
+  51:'Light drizzle',53:'Drizzle',55:'Dense drizzle',
+  56:'Freezing drizzle',57:'Freezing drizzle',
+  61:'Light rain',63:'Rain',65:'Heavy rain',
+  66:'Freezing rain',67:'Freezing rain',
+  71:'Light snow',73:'Snow',75:'Heavy snow',77:'Snow grains',
+  80:'Rain showers',81:'Rain showers',82:'Violent showers',
+  85:'Snow showers',86:'Snow showers',
+  95:'Thunderstorm',96:'Thunderstorm w/ hail',99:'Thunderstorm w/ hail'
+};
+
+function iconFor(code){ return WEATHER_ICONS[code] ?? '🌡️'; }
+function descFor(code){ return WEATHER_DESC[code] ?? 'Unknown'; }
+
+// default three cities (used if nothing saved yet)
+const DEFAULT_CITIES = [
+  { name:'Melbourne', region:'Victoria, AU', lat:-37.8136, lon:144.9631 },
+  { name:'Sydney', region:'New South Wales, AU', lat:-33.8688, lon:151.2093 },
+  { name:'Brisbane', region:'Queensland, AU', lat:-27.4698, lon:153.0251 }
+];
+
+const STORAGE_KEY = 'sky-strip-cities';
+const REFRESH_MS = 15 * 60 * 1000; // auto-refresh every 15 minutes
+
+function loadSavedCities(){
+  try{
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if(!raw) return null;
+    const parsed = JSON.parse(raw);
+    if(Array.isArray(parsed) && parsed.length===3) return parsed;
+    return null;
+  }catch(e){
+    return null;
+  }
+}
+
+function saveCities(){
+  try{
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(cities));
+  }catch(e){
+    // storage unavailable — dashboard still works, just won't persist
+  }
+}
+
+let cities = loadSavedCities() || DEFAULT_CITIES.slice();
+
+// preset selection list — Australian cities only
+const AU_CITIES = [
+  { name:'Sydney', region:'New South Wales, AU', lat:-33.8688, lon:151.2093 },
+  { name:'Melbourne', region:'Victoria, AU', lat:-37.8136, lon:144.9631 },
+  { name:'Brisbane', region:'Queensland, AU', lat:-27.4698, lon:153.0251 },
+  { name:'Perth', region:'Western Australia, AU', lat:-31.9505, lon:115.8605 },
+  { name:'Adelaide', region:'South Australia, AU', lat:-34.9285, lon:138.6007 },
+  { name:'Gold Coast', region:'Queensland, AU', lat:-28.0167, lon:153.4000 },
+  { name:'Canberra', region:'Australian Capital Territory, AU', lat:-35.2809, lon:149.1300 },
+  { name:'Newcastle', region:'New South Wales, AU', lat:-32.9283, lon:151.7817 },
+  { name:'Wollongong', region:'New South Wales, AU', lat:-34.4278, lon:150.8931 },
+  { name:'Hobart', region:'Tasmania, AU', lat:-42.8821, lon:147.3272 },
+  { name:'Geelong', region:'Victoria, AU', lat:-38.1499, lon:144.3617 },
+  { name:'Townsville', region:'Queensland, AU', lat:-19.2590, lon:146.8169 },
+  { name:'Cairns', region:'Queensland, AU', lat:-16.9186, lon:145.7781 },
+  { name:'Darwin', region:'Northern Territory, AU', lat:-12.4634, lon:130.8456 },
+  { name:'Toowoomba', region:'Queensland, AU', lat:-27.5606, lon:151.9539 },
+  { name:'Ballarat', region:'Victoria, AU', lat:-37.5622, lon:143.8503 },
+  { name:'Bendigo', region:'Victoria, AU', lat:-36.7570, lon:144.2794 },
+  { name:'Launceston', region:'Tasmania, AU', lat:-41.4332, lon:147.1441 },
+  { name:'Mackay', region:'Queensland, AU', lat:-21.1411, lon:149.1858 },
+  { name:'Alice Springs', region:'Northern Territory, AU', lat:-23.6980, lon:133.8807 }
+];
+
+let activeSlot = null;
+
+async function fetchWeather(city){
+  const url = `https://api.open-meteo.com/v1/forecast?latitude=${city.lat}&longitude=${city.lon}&hourly=temperature_2m,weathercode,precipitation_probability&current=temperature_2m,weathercode,relative_humidity_2m,wind_speed_10m&timezone=auto&forecast_days=2`;
+  const res = await fetch(url);
+  if(!res.ok) throw new Error('Weather fetch failed');
+  return res.json();
+}
+
+function buildGraph(temps, width=460, height=70){
+  const min = Math.min(...temps);
+  const max = Math.max(...temps);
+  const range = (max - min) || 1;
+  const stepX = width / (temps.length - 1);
+  const pts = temps.map((t,i)=>{
+    const x = i*stepX;
+    const y = height - ((t-min)/range)*(height-16) - 8;
+    return [x,y];
+  });
+  const path = pts.map((p,i)=> (i===0?'M':'L')+p[0].toFixed(1)+','+p[1].toFixed(1)).join(' ');
+  const areaPath = path + ` L${width},${height} L0,${height} Z`;
+  return `
+  <svg viewBox="0 0 ${width} ${height}" preserveAspectRatio="none">
+    <defs>
+      <linearGradient id="grad-${Math.random().toString(36).slice(2)}" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="#FF8B5E" stop-opacity="0.35"/>
+        <stop offset="100%" stop-color="#FF8B5E" stop-opacity="0"/>
+      </linearGradient>
+    </defs>
+    <path d="${areaPath}" fill="rgba(255,139,94,0.12)"/>
+    <path d="${path}" fill="none" stroke="#FF8B5E" stroke-width="1.8"/>
+  </svg>`;
+}
+
+function skyGradientFor(hourOfDay){
+  // hourOfDay: 0-23 local hour, returns a css gradient string
+  if(hourOfDay>=6 && hourOfDay<9) return 'linear-gradient(160deg, #2B3E63 0%, #6B5B7A 55%, #C97B5E 100%)'; // dawn
+  if(hourOfDay>=9 && hourOfDay<17) return 'linear-gradient(160deg, #1B2A4A 0%, #24406B 100%)'; // day
+  if(hourOfDay>=17 && hourOfDay<20) return 'linear-gradient(160deg, #1B2A4A 0%, #6B3F52 55%, #C97B5E 100%)'; // dusk
+  return 'linear-gradient(160deg, #0B1220 0%, #151F38 100%)'; // night
+}
+
+function renderPanel(slotIndex, city, data){
+  const panel = document.getElementById('panel-'+slotIndex);
+  if(!data){
+    panel.innerHTML = `<div class="status-msg">Couldn't load forecast for ${city.name}. Try changing the city.</div>`;
+    return;
+  }
+  const cur = data.current;
+  const nowHourIdx = data.hourly.time.findIndex(t => t === data.current.time.slice(0,14)+'00' ) ;
+  let startIdx = data.hourly.time.findIndex(t => new Date(t) >= new Date(data.current.time));
+  if(startIdx < 0) startIdx = 0;
+
+  const next24Temps = data.hourly.temperature_2m.slice(startIdx, startIdx+24);
+  const localHour = new Date(cur.time).getHours();
+  const skyBg = skyGradientFor(localHour);
+
+  let hourItems = '';
+  for(let i=startIdx; i<startIdx+24 && i<data.hourly.time.length; i++){
+    const d = new Date(data.hourly.time[i]);
+    const label = i===startIdx ? 'Now' : d.toLocaleTimeString([], {hour:'numeric'});
+    hourItems += `
+      <div class="hour-item ${i===startIdx?'now':''}">
+        <div class="hour-time">${label}</div>
+        <div class="hour-icon">${iconFor(data.hourly.weathercode[i])}</div>
+        <div class="hour-temp">${Math.round(data.hourly.temperature_2m[i])}°</div>
+        <div class="hour-precip">${data.hourly.precipitation_probability[i]}%</div>
+      </div>`;
+  }
+
+  panel.innerHTML = `
+    <div class="panel-sky" style="background:${skyBg}">
+      <div class="panel-topline">
+        <div class="city-slot">
+          <div class="city-name">${city.name}</div>
+          <div class="city-sub">${city.region}</div>
+        </div>
+        <button class="change-btn" onclick="openSearch(${slotIndex})">Change</button>
+      </div>
+      <div class="now-row">
+        <div class="now-temp">${Math.round(cur.temperature_2m)}°</div>
+        <div class="now-icon">${iconFor(cur.weathercode)}</div>
+      </div>
+      <div class="now-desc">${descFor(cur.weathercode)}</div>
+      <div class="now-meta">
+        <span>Humidity <b>${cur.relative_humidity_2m}%</b></span>
+        <span>Wind <b>${Math.round(cur.wind_speed_10m)} km/h</b></span>
+        <span>Local <b>${new Date(cur.time).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</b></span>
+      </div>
+    </div>
+    <div class="hourly-section">
+      <div class="hourly-label">Next 24 hours</div>
+      <div class="graph-holder">${buildGraph(next24Temps)}</div>
+      <div class="hour-scroll">${hourItems}</div>
+    </div>
+  `;
+}
+
+async function loadSlot(slotIndex){
+  const panel = document.getElementById('panel-'+slotIndex);
+  panel.innerHTML = `<div class="status-msg">Loading ${cities[slotIndex].name}…</div>`;
+  try{
+    const data = await fetchWeather(cities[slotIndex]);
+    renderPanel(slotIndex, cities[slotIndex], data);
+  }catch(e){
+    renderPanel(slotIndex, cities[slotIndex], null);
+  }
+}
+
+function renderAllPanels(){
+  const container = document.getElementById('panels');
+  container.innerHTML = cities.map((c,i)=>`<div class="panel" id="panel-${i}"><div class="status-msg">Loading ${c.name}…</div></div>`).join('');
+  cities.forEach((c,i)=> loadSlot(i));
+  document.getElementById('fetchedAt').textContent = 'Loaded ' + new Date().toLocaleString();
+}
+
+// search overlay logic
+function renderCityList(list){
+  const resultsEl = document.getElementById('searchResults');
+  if(list.length===0){
+    resultsEl.innerHTML = `<div class="status-msg" style="padding:14px 0;">No matches found.</div>`;
+    return;
+  }
+  resultsEl.innerHTML = list.map(c=>`
+    <div class="search-result" onclick='selectCity(${c.lat}, ${c.lon}, ${JSON.stringify(c.name)}, ${JSON.stringify(c.region)})'>
+      <span class="search-result-name">${c.name}</span>
+      <span class="search-result-region">${c.region}</span>
+    </div>`).join('');
+}
+
+function openSearch(slotIndex){
+  activeSlot = slotIndex;
+  document.getElementById('searchOverlay').classList.add('open');
+  document.getElementById('searchInput').value='';
+  renderCityList(AU_CITIES);
+  document.getElementById('searchInput').focus();
+}
+function closeSearch(){
+  document.getElementById('searchOverlay').classList.remove('open');
+  activeSlot = null;
+}
+
+let searchTimeout = null;
+document.getElementById('searchInput').addEventListener('input', (e)=>{
+  clearTimeout(searchTimeout);
+  const q = e.target.value.trim();
+  if(q.length===0){ renderCityList(AU_CITIES); return; }
+  if(q.length<2){ return; }
+  searchTimeout = setTimeout(()=> doSearch(q), 300);
+});
+
+async function doSearch(q){
+  const resultsEl = document.getElementById('searchResults');
+  resultsEl.innerHTML = `<div class="status-msg" style="padding:14px 0;">Searching…</div>`;
+  try{
+    // count=30 and filtered to AU client-side so suburbs (not just capitals) surface
+    const res = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(q)}&count=30&language=en&format=json`);
+    const data = await res.json();
+    const auResults = (data.results || []).filter(r => r.country_code === 'AU');
+    if(auResults.length===0){
+      resultsEl.innerHTML = `<div class="status-msg" style="padding:14px 0;">No Australian matches found.</div>`;
+      return;
+    }
+    const mapped = auResults.map(r => ({
+      name: r.name,
+      region: [r.admin2, r.admin1].filter(Boolean).join(', ') || 'Australia',
+      lat: r.latitude,
+      lon: r.longitude
+    }));
+    renderCityList(mapped);
+  }catch(e){
+    resultsEl.innerHTML = `<div class="status-msg" style="padding:14px 0;">Search failed. Try again.</div>`;
+  }
+}
+
+function selectCity(lat, lon, name, region){
+  if(activeSlot===null) return;
+  const slotToUpdate = activeSlot;
+  cities[slotToUpdate] = { name, region: region || '—', lat, lon };
+  saveCities();
+  closeSearch();
+  loadSlot(slotToUpdate);
+}
+
+document.getElementById('searchOverlay').addEventListener('click', (e)=>{
+  if(e.target.id==='searchOverlay') closeSearch();
+});
+
+renderAllPanels();
+</script>
+</body>
+</html>
