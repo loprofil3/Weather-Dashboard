@@ -20,14 +20,18 @@
     --mist-dim:#5C6A85;
   }
   *{box-sizing:border-box; margin:0; padding:0;}
+  html, body{height:100%;}
   body{
     background:var(--bg-void);
     color:var(--sky-pale);
     font-family:'Inter', sans-serif;
-    min-height:100vh;
-    padding:32px 20px 60px;
+    height:100vh;
+    padding:28px 32px 24px;
+    display:flex;
+    flex-direction:column;
+    overflow:hidden;
   }
-  .wrap{max-width:1180px; margin:0 auto;}
+  .wrap{width:100%; height:100%; display:flex; flex-direction:column; flex:1; min-height:0;}
 
   header{
     display:flex;
@@ -35,9 +39,10 @@
     align-items:flex-end;
     flex-wrap:wrap;
     gap:16px;
-    margin-bottom:36px;
+    margin-bottom:28px;
     border-bottom:1px solid var(--line-indigo);
-    padding-bottom:20px;
+    padding-bottom:18px;
+    flex:0 0 auto;
   }
   .brand-eyebrow{
     font-family:'JetBrains Mono', monospace;
@@ -64,8 +69,11 @@
     display:grid;
     grid-template-columns:repeat(3, 1fr);
     gap:20px;
+    flex:1;
+    min-height:0;
   }
   @media (max-width:900px){
+    body{height:auto; overflow:auto;}
     .panels{grid-template-columns:1fr;}
   }
 
@@ -76,13 +84,15 @@
     overflow:hidden;
     display:flex;
     flex-direction:column;
-    min-height:520px;
+    height:100%;
+    min-height:0;
   }
 
   .panel-sky{
     padding:22px 22px 18px;
     position:relative;
     transition:background 0.6s ease;
+    flex:0 0 auto;
   }
 
   .panel-topline{
@@ -99,13 +109,13 @@
   }
   .city-name{
     font-family:'Space Grotesk', sans-serif;
-    font-size:19px;
+    font-size:38px;
     font-weight:600;
   }
   .city-sub{
     font-family:'JetBrains Mono', monospace;
-    font-size:11px;
-    color:rgba(232,238,245,0.65);
+    font-size:22px;
+    color:rgba(232,238,245,0.85);
     letter-spacing:0.04em;
   }
   .change-btn{
@@ -132,22 +142,23 @@
   .now-temp{
     font-family:'JetBrains Mono', monospace;
     font-weight:700;
-    font-size:56px;
+    font-size:128px;
     line-height:1;
   }
-  .now-icon{font-size:34px; line-height:1;}
+  .now-icon{font-size:128px; line-height:1;}
   .now-desc{
     font-family:'Inter', sans-serif;
-    font-size:13px;
-    color:rgba(232,238,245,0.8);
+    font-size:28px;
+    font-weight:500;
+    color:rgba(255,255,255,0.95);
   }
   .now-meta{
     display:flex;
     gap:16px;
     margin-top:14px;
     font-family:'JetBrains Mono', monospace;
-    font-size:11px;
-    color:rgba(232,238,245,0.7);
+    font-size:22px;
+    color:rgba(232,238,245,0.85);
   }
   .now-meta span b{color:var(--sky-pale); font-weight:600;}
 
@@ -155,15 +166,17 @@
     background:var(--bg-panel);
     padding:18px 18px 22px;
     flex:1;
+    min-height:0;
     display:flex;
     flex-direction:column;
+    overflow-y:auto;
   }
   .hourly-label{
     font-family:'JetBrains Mono', monospace;
-    font-size:10px;
+    font-size:20px;
     letter-spacing:0.14em;
     text-transform:uppercase;
-    color:var(--mist-dim);
+    color:var(--mist);
     margin-bottom:10px;
   }
   .graph-holder{margin-bottom:8px;}
@@ -183,7 +196,7 @@
 
   .hour-item{
     flex:0 0 auto;
-    width:52px;
+    width:100px;
     text-align:center;
     padding:6px 0;
     border-right:1px solid rgba(255,255,255,0.03);
@@ -194,19 +207,21 @@
   }
   .hour-time{
     font-family:'JetBrains Mono', monospace;
-    font-size:10px;
-    color:var(--mist-dim);
+    font-size:22px;
+    font-weight:500;
+    color:var(--sky-pale);
     margin-bottom:6px;
   }
-  .hour-icon{font-size:16px; margin-bottom:6px;}
+  .hour-icon{font-size:60px; margin-bottom:6px;}
   .hour-temp{
     font-family:'JetBrains Mono', monospace;
-    font-size:12px;
-    font-weight:600;
+    font-size:26px;
+    font-weight:700;
+    color:var(--sky-pale);
   }
   .hour-precip{
     font-family:'JetBrains Mono', monospace;
-    font-size:9px;
+    font-size:18px;
     color:#6FA8D6;
     margin-top:4px;
   }
@@ -287,12 +302,13 @@
   .search-close:hover{color:var(--sky-pale); border-color:var(--mist);}
 
   footer{
-    margin-top:30px;
+    margin-top:14px;
     text-align:center;
     font-family:'JetBrains Mono', monospace;
     font-size:10px;
     color:var(--mist-dim);
     letter-spacing:0.04em;
+    flex:0 0 auto;
   }
 </style>
 </head>
@@ -300,7 +316,7 @@
 <div class="wrap">
   <header>
     <div>
-      <div class="brand-eyebrow">◐ Weather Instrument panel</div>
+      <div class="brand-eyebrow">◐ Three-city instrument panel</div>
       <h1>Sky Strip</h1>
     </div>
     <div class="clock-local" id="fetchedAt"></div>
@@ -313,8 +329,8 @@
 
 <div class="search-overlay" id="searchOverlay">
   <div class="search-box">
-    <h3>Choose an Australian city or suburb</h3>
-    <input type="text" id="searchInput" placeholder="Search any AU city or suburb…" autocomplete="off">
+    <h3>Choose a city or suburb</h3>
+    <input type="text" id="searchInput" placeholder="Search any city worldwide…" autocomplete="off">
     <div class="search-results" id="searchResults"></div>
     <button class="search-close" onclick="closeSearch()">Cancel</button>
   </div>
@@ -381,28 +397,28 @@ function saveCities(){
 
 let cities = loadSavedCities() || DEFAULT_CITIES.slice();
 
-// preset selection list — Australian cities only
-const AU_CITIES = [
+// preset quick-pick list — Australian cities plus major world cities
+const QUICK_PICK_CITIES = [
   { name:'Sydney', region:'New South Wales, AU', lat:-33.8688, lon:151.2093 },
   { name:'Melbourne', region:'Victoria, AU', lat:-37.8136, lon:144.9631 },
   { name:'Brisbane', region:'Queensland, AU', lat:-27.4698, lon:153.0251 },
   { name:'Perth', region:'Western Australia, AU', lat:-31.9505, lon:115.8605 },
   { name:'Adelaide', region:'South Australia, AU', lat:-34.9285, lon:138.6007 },
-  { name:'Gold Coast', region:'Queensland, AU', lat:-28.0167, lon:153.4000 },
   { name:'Canberra', region:'Australian Capital Territory, AU', lat:-35.2809, lon:149.1300 },
-  { name:'Newcastle', region:'New South Wales, AU', lat:-32.9283, lon:151.7817 },
-  { name:'Wollongong', region:'New South Wales, AU', lat:-34.4278, lon:150.8931 },
   { name:'Hobart', region:'Tasmania, AU', lat:-42.8821, lon:147.3272 },
-  { name:'Geelong', region:'Victoria, AU', lat:-38.1499, lon:144.3617 },
-  { name:'Townsville', region:'Queensland, AU', lat:-19.2590, lon:146.8169 },
-  { name:'Cairns', region:'Queensland, AU', lat:-16.9186, lon:145.7781 },
   { name:'Darwin', region:'Northern Territory, AU', lat:-12.4634, lon:130.8456 },
-  { name:'Toowoomba', region:'Queensland, AU', lat:-27.5606, lon:151.9539 },
-  { name:'Ballarat', region:'Victoria, AU', lat:-37.5622, lon:143.8503 },
-  { name:'Bendigo', region:'Victoria, AU', lat:-36.7570, lon:144.2794 },
-  { name:'Launceston', region:'Tasmania, AU', lat:-41.4332, lon:147.1441 },
-  { name:'Mackay', region:'Queensland, AU', lat:-21.1411, lon:149.1858 },
-  { name:'Alice Springs', region:'Northern Territory, AU', lat:-23.6980, lon:133.8807 }
+  { name:'Tokyo', region:'Japan', lat:35.6762, lon:139.6503 },
+  { name:'Singapore', region:'Singapore', lat:1.3521, lon:103.8198 },
+  { name:'London', region:'United Kingdom', lat:51.5072, lon:-0.1276 },
+  { name:'Paris', region:'France', lat:48.8566, lon:2.3522 },
+  { name:'New York', region:'NY, United States', lat:40.7128, lon:-74.0060 },
+  { name:'Los Angeles', region:'CA, United States', lat:34.0522, lon:-118.2437 },
+  { name:'Dubai', region:'United Arab Emirates', lat:25.2048, lon:55.2708 },
+  { name:'Auckland', region:'New Zealand', lat:-36.8485, lon:174.7633 },
+  { name:'Bali', region:'Indonesia', lat:-8.3405, lon:115.0920 },
+  { name:'Jakarta', region:'Indonesia', lat:-6.2088, lon:106.8456 },
+  { name:'Hong Kong', region:'Hong Kong', lat:22.3193, lon:114.1694 },
+  { name:'Cape Town', region:'South Africa', lat:-33.9249, lon:18.4241 }
 ];
 
 let activeSlot = null;
@@ -539,7 +555,7 @@ function openSearch(slotIndex){
   activeSlot = slotIndex;
   document.getElementById('searchOverlay').classList.add('open');
   document.getElementById('searchInput').value='';
-  renderCityList(AU_CITIES);
+  renderCityList(QUICK_PICK_CITIES);
   document.getElementById('searchInput').focus();
 }
 function closeSearch(){
@@ -551,7 +567,7 @@ let searchTimeout = null;
 document.getElementById('searchInput').addEventListener('input', (e)=>{
   clearTimeout(searchTimeout);
   const q = e.target.value.trim();
-  if(q.length===0){ renderCityList(AU_CITIES); return; }
+  if(q.length===0){ renderCityList(QUICK_PICK_CITIES); return; }
   if(q.length<2){ return; }
   searchTimeout = setTimeout(()=> doSearch(q), 300);
 });
@@ -560,17 +576,17 @@ async function doSearch(q){
   const resultsEl = document.getElementById('searchResults');
   resultsEl.innerHTML = `<div class="status-msg" style="padding:14px 0;">Searching…</div>`;
   try{
-    // count=30 and filtered to AU client-side so suburbs (not just capitals) surface
-    const res = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(q)}&count=30&language=en&format=json`);
+    // count=15, worldwide (no country filter)
+    const res = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(q)}&count=15&language=en&format=json`);
     const data = await res.json();
-    const auResults = (data.results || []).filter(r => r.country_code === 'AU');
-    if(auResults.length===0){
-      resultsEl.innerHTML = `<div class="status-msg" style="padding:14px 0;">No Australian matches found.</div>`;
+    const results = data.results || [];
+    if(results.length===0){
+      resultsEl.innerHTML = `<div class="status-msg" style="padding:14px 0;">No matches found.</div>`;
       return;
     }
-    const mapped = auResults.map(r => ({
+    const mapped = results.map(r => ({
       name: r.name,
-      region: [r.admin2, r.admin1].filter(Boolean).join(', ') || 'Australia',
+      region: [r.admin1, r.country].filter(Boolean).join(', ') || 'Unknown',
       lat: r.latitude,
       lon: r.longitude
     }));
