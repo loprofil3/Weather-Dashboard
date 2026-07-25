@@ -145,7 +145,17 @@
     font-size:96px;
     line-height:1;
   }
-  .now-icon{font-size:96px; line-height:1;}
+  .now-icon{
+    font-size:96px;
+    line-height:1;
+    font-family:"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif;
+    background:rgba(11,18,32,0.35);
+    border-radius:50%;
+    padding:6px;
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+  }
   .now-desc{
     font-family:'Inter', sans-serif;
     font-size:21px;
@@ -212,7 +222,14 @@
     color:var(--sky-pale);
     margin-bottom:6px;
   }
-  .hour-icon{font-size:45px; margin-bottom:6px;}
+  .hour-icon{
+    font-size:45px;
+    margin-bottom:6px;
+    font-family:"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+  }
   .hour-temp{
     font-family:'JetBrains Mono', monospace;
     font-size:20px;
@@ -364,7 +381,16 @@ const WEATHER_DESC = {
   95:'Thunderstorm',96:'Thunderstorm w/ hail',99:'Thunderstorm w/ hail'
 };
 
-function iconFor(code){ return WEATHER_ICONS[code] ?? '🌡️'; }
+const MOON_SVG = '<svg viewBox="0 0 24 24" style="width:1em;height:1em;display:inline-block;vertical-align:-0.08em;"><path d="M21 12.79A9 9 0 1 1 11.21 3a7 7 0 0 0 9.79 9.79z" fill="#6FA8D6"/></svg>';
+
+const WEATHER_ICONS_NIGHT = {
+  0:MOON_SVG,1:MOON_SVG,2:'☁️',3:'☁️'
+};
+
+function iconFor(code, isDay){
+  if(isDay === 0 && WEATHER_ICONS_NIGHT[code]) return WEATHER_ICONS_NIGHT[code];
+  return WEATHER_ICONS[code] ?? '🌡️';
+}
 function descFor(code){ return WEATHER_DESC[code] ?? 'Unknown'; }
 
 // default three cities (used if nothing saved yet)
@@ -426,7 +452,7 @@ const QUICK_PICK_CITIES = [
 let activeSlot = null;
 
 async function fetchWeather(city){
-  const url = `https://api.open-meteo.com/v1/forecast?latitude=${city.lat}&longitude=${city.lon}&hourly=temperature_2m,weathercode,precipitation_probability&current=temperature_2m,weathercode,relative_humidity_2m,wind_speed_10m&timezone=auto&forecast_days=2`;
+  const url = `https://api.open-meteo.com/v1/forecast?latitude=${city.lat}&longitude=${city.lon}&hourly=temperature_2m,weathercode,precipitation_probability,is_day&current=temperature_2m,weathercode,relative_humidity_2m,wind_speed_10m,is_day&timezone=auto&forecast_days=2`;
   const res = await fetch(url);
   if(!res.ok) throw new Error('Weather fetch failed');
   return res.json();
@@ -487,7 +513,7 @@ function renderPanel(slotIndex, city, data){
     hourItems += `
       <div class="hour-item ${i===startIdx?'now':''}">
         <div class="hour-time">${label}</div>
-        <div class="hour-icon">${iconFor(data.hourly.weathercode[i])}</div>
+        <div class="hour-icon">${iconFor(data.hourly.weathercode[i], data.hourly.is_day[i])}</div>
         <div class="hour-temp">${Math.round(data.hourly.temperature_2m[i])}°</div>
         <div class="hour-precip">${data.hourly.precipitation_probability[i]}%</div>
       </div>`;
@@ -504,7 +530,7 @@ function renderPanel(slotIndex, city, data){
       </div>
       <div class="now-row">
         <div class="now-temp">${Math.round(cur.temperature_2m)}°</div>
-        <div class="now-icon">${iconFor(cur.weathercode)}</div>
+        <div class="now-icon">${iconFor(cur.weathercode, cur.is_day)}</div>
       </div>
       <div class="now-desc">${descFor(cur.weathercode)}</div>
       <div class="now-meta">
