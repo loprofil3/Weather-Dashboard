@@ -349,7 +349,7 @@
 <div class="wrap">
   <header>
     <div>
-      <div class="brand-eyebrow">◐ Weather instrument panel</div>
+      <div class="brand-eyebrow">◐ Weather Dashboard</div>
       <h1>Sky Strip</h1>
     </div>
     <div class="clock-local" id="fetchedAt"></div>
@@ -513,12 +513,15 @@ function renderPanel(slotIndex, city, data){
     return;
   }
   const cur = data.current;
-  const nowHourIdx = data.hourly.time.findIndex(t => t === data.current.time.slice(0,14)+'00' ) ;
-  let startIdx = data.hourly.time.findIndex(t => new Date(t) >= new Date(data.current.time));
+  // NOTE: Open-Meteo returns time strings local to the CITY, with no offset attached
+  // (e.g. "2026-07-28T14:00"). new Date(...) on a string like this gets reinterpreted
+  // using the BROWSER's timezone, not the city's — so we compare/parse the strings
+  // directly instead of going through Date().
+  let startIdx = data.hourly.time.findIndex(t => t >= cur.time);
   if(startIdx < 0) startIdx = 0;
 
   const next24Temps = data.hourly.temperature_2m.slice(startIdx, startIdx+24);
-  const localHour = new Date(cur.time).getHours();
+  const localHour = parseInt(cur.time.slice(11,13), 10);
   const skyBg = skyGradientFor(localHour);
 
   // store this city's UTC offset + abbreviation so the clock can tick live
@@ -527,10 +530,17 @@ function renderPanel(slotIndex, city, data){
     abbr: data.timezone_abbreviation || ''
   };
 
+  function formatHourLabel(timeStr){
+    const h = parseInt(timeStr.slice(11,13), 10);
+    const period = h < 12 ? 'AM' : 'PM';
+    let h12 = h % 12;
+    if(h12 === 0) h12 = 12;
+    return `${h12}${period}`;
+  }
+
   let hourItems = '';
   for(let i=startIdx; i<startIdx+24 && i<data.hourly.time.length; i++){
-    const d = new Date(data.hourly.time[i]);
-    const label = i===startIdx ? 'Now' : d.toLocaleTimeString([], {hour:'numeric'});
+    const label = i===startIdx ? 'Now' : formatHourLabel(data.hourly.time[i]);
     hourItems += `
       <div class="hour-item ${i===startIdx?'now':''}">
         <div class="hour-time">${label}</div>
