@@ -517,7 +517,13 @@ function renderPanel(slotIndex, city, data){
   // (e.g. "2026-07-28T14:00"). new Date(...) on a string like this gets reinterpreted
   // using the BROWSER's timezone, not the city's — so we compare/parse the strings
   // directly instead of going through Date().
-  let startIdx = data.hourly.time.findIndex(t => t >= cur.time);
+  // match the hourly slot for the current HOUR (ignore minutes) — current.time has
+  // minute precision (e.g. "14:15") but hourly.time is only on the hour ("14:00"),
+  // so comparing full timestamps would skip ahead to the next hour whenever the
+  // current time isn't exactly on the hour.
+  const currentHourPrefix = cur.time.slice(0,13); // "YYYY-MM-DDTHH"
+  let startIdx = data.hourly.time.findIndex(t => t.slice(0,13) === currentHourPrefix);
+  if(startIdx < 0) startIdx = data.hourly.time.findIndex(t => t >= cur.time);
   if(startIdx < 0) startIdx = 0;
 
   const next24Temps = data.hourly.temperature_2m.slice(startIdx, startIdx+24);
