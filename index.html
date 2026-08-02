@@ -126,6 +126,12 @@
     letter-spacing:0.02em;
     margin-top:2px;
   }
+  .topline-actions{
+    display:flex;
+    flex-direction:column;
+    gap:6px;
+    align-items:flex-end;
+  }
   .change-btn{
     font-family:'JetBrains Mono', monospace;
     font-size:10px;
@@ -140,6 +146,21 @@
     white-space:nowrap;
   }
   .change-btn:hover{background:rgba(0,0,0,0.4);}
+  .locate-btn{
+    font-family:'JetBrains Mono', monospace;
+    font-size:10px;
+    letter-spacing:0.08em;
+    text-transform:uppercase;
+    background:rgba(255,200,87,0.15);
+    border:1px solid rgba(255,200,87,0.45);
+    color:var(--gold);
+    padding:6px 10px;
+    border-radius:20px;
+    cursor:pointer;
+    white-space:nowrap;
+  }
+  .locate-btn:hover{background:rgba(255,200,87,0.28);}
+  .locate-btn:disabled{opacity:0.6; cursor:default;}
 
   .now-row{
     display:flex;
@@ -349,7 +370,7 @@
 <div class="wrap">
   <header>
     <div>
-      <div class="brand-eyebrow">◐ Weather Dashboard</div>
+      <div class="brand-eyebrow">◐ Weather Dashboard panel</div>
       <h1>Sky Strip</h1>
     </div>
     <div class="clock-local" id="fetchedAt"></div>
@@ -565,7 +586,10 @@ function renderPanel(slotIndex, city, data){
           <div class="city-sub">${city.region}</div>
           <div class="city-clock" id="clock-${slotIndex}">--:--:--</div>
         </div>
-        <button class="change-btn" onclick="openSearch(${slotIndex})">Change</button>
+        <div class="topline-actions">
+          ${slotIndex===0 ? `<button class="locate-btn" onclick="locateMe(${slotIndex})" id="locateBtn">📍 My location</button>` : ''}
+          <button class="change-btn" onclick="openSearch(${slotIndex})">Change</button>
+        </div>
       </div>
       <div class="now-row">
         <div class="now-temp">${Math.round(cur.temperature_2m)}°</div>
@@ -689,11 +713,72 @@ function selectCity(lat, lon, name, region){
   loadSlot(slotToUpdate);
 }
 
+function locateMe(slotIndex){
+  if(!navigator.geolocation){
+    alert('Geolocation is not supported by this browser.');
+    return;
+  }
+  const btn = document.getElementById('locateBtn');
+  if(btn){ btn.disabled = true; btn.textContent = '📍 Locating…'; }
+
+  navigator.geolocation.getCurrentPosition(
+    async (pos)=>{
+      const lat = pos.coords.latitude;
+      const lon = pos.coords.longitude;
+      let name = 'My Location';
+      let region = 'Current position';
+      try{
+        const res = await fetch(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lon}&localityLanguage=en`);
+        const data = await res.json();
+        name = data.locality || data.city || data.principalSubdivision || 'My Location';
+        region = [data.principalSubdivision, data.countryName].filter(Boolean).join(', ') || 'Current position';
+      }catch(e){
+        // reverse geocoding failed — fall back to generic label, weather still loads fine
+      }
+      cities[slotIndex] = { name, region, lat, lon };
+      saveCities();
+      loadSlot(slotIndex);
+    },
+    (err)=>{
+      if(btn){ btn.disabled = false; btn.textContent = '📍 My location'; }
+      alert('Could not get your location: ' + err.message);
+    },
+    { enableHighAccuracy:false, timeout:10000 }
+  );
+}
+
 document.getElementById('searchOverlay').addEventListener('click', (e)=>{
   if(e.target.id==='searchOverlay') closeSearch();
 });
 
 renderAllPanels();
+
+// Try to set the FIRST panel to the user's current location via browser geolocation.
+// Slots 1 and 2 are left untouched — only cities[0] is affected.
+function useCurrentLocationForFirstSlot(){
+  if(!navigator.geolocation) return;
+  navigator.geolocation.getCurrentPosition(async (pos)=>{
+    const lat = pos.coords.latitude;
+    const lon = pos.coords.longitude;
+    let name = 'Current Location';
+    let region = '';
+    try{
+      const res = await fetch(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lon}&localityLanguage=en`);
+      const geo = await res.json();
+      name = geo.city || geo.locality || name;
+      region = [geo.principalSubdivision, geo.countryName].filter(Boolean).join(', ');
+    }catch(e){
+      // reverse geocoding failed — still use the coordinates with a generic label
+    }
+    cities[0] = { name, region: region || '—', lat, lon };
+    saveCities();
+    loadSlot(0);
+  }, ()=>{
+    // permission denied or unavailable — keep whatever slot 0 already had
+  });
+}
+useCurrentLocationForFirstSlot();
+
 </script>
 </body>
 </html>
