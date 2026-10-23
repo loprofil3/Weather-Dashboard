@@ -487,7 +487,11 @@ const QUICK_PICK_CITIES = [
 let activeSlot = null;
 
 async function fetchWeather(city){
-  const url = `https://api.open-meteo.com/v1/forecast?latitude=${city.lat}&longitude=${city.lon}&hourly=temperature_2m,weathercode,precipitation_probability,is_day,wind_speed_10m&current=temperature_2m,weathercode,relative_humidity_2m,wind_speed_10m,is_day&timezone=auto&forecast_days=2`;
+  // Use the Bureau of Meteorology's ACCESS-G model for locations inside Australia
+  // (rough bounding box); everywhere else uses Open-Meteo's default model blend.
+  const inAustralia = city.lat < -9 && city.lat > -45 && city.lon > 112 && city.lon < 154;
+  const modelParam = inAustralia ? '&models=bom_access_global' : '';
+  const url = `https://api.open-meteo.com/v1/forecast?latitude=${city.lat}&longitude=${city.lon}&hourly=temperature_2m,weathercode,precipitation_probability,is_day,wind_speed_10m&current=temperature_2m,weathercode,relative_humidity_2m,wind_speed_10m,is_day&timezone=auto&forecast_days=2${modelParam}`;
   const res = await fetch(url);
   if(!res.ok) throw new Error('Weather fetch failed');
   return res.json();
@@ -741,7 +745,20 @@ function locateMe(slotIndex){
     },
     (err)=>{
       if(btn){ btn.disabled = false; btn.textContent = '📍 My location'; }
-      alert('Could not get your location: ' + err.message);
+      let msg = 'Could not get your location.\n\n';
+      if(err.code === 1){ // PERMISSION_DENIED
+        msg += 'Permission was denied. This usually means one of:\n'
+             + '• Your device\'s Location Services are turned off (check OS-level Privacy/Location settings, not just the browser)\n'
+             + '• A previous "Block" is cached for this site — click the padlock icon next to the address bar → Site settings → Location → set to "Ask", then reload\n'
+             + '• Try a private/incognito window to rule out cached permissions';
+      } else if(err.code === 2){ // POSITION_UNAVAILABLE
+        msg += 'Your position could not be determined. Try again, or check your device\'s location/GPS settings.';
+      } else if(err.code === 3){ // TIMEOUT
+        msg += 'The request timed out. Try again — this can happen on a weak GPS/network signal.';
+      } else {
+        msg += err.message;
+      }
+      alert(msg);
     },
     { enableHighAccuracy:false, timeout:10000 }
   );
