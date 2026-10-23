@@ -370,7 +370,7 @@
 <div class="wrap">
   <header>
     <div>
-      <div class="brand-eyebrow">◐ Weather Dashboard panel</div>
+      <div class="brand-eyebrow">◐ ◐ Weather Dashboard panel</div>
       <h1>Sky Strip</h1>
     </div>
     <div class="clock-local" id="fetchedAt"></div>
@@ -486,13 +486,60 @@ const QUICK_PICK_CITIES = [
 
 let activeSlot = null;
 
+// When two models are requested, Open-Meteo suffixes each variable with the model
+// name (e.g. temperature_2m_bom_access_global). This merges them back into the
+// normal shape: BOM values first for temp/humidity/wind/rain chance, default
+// blend first for conditions + day/night, with per-value fallback if one is null.
+function mergeModels(raw){
+  const BOM = '_bom_access_global', DEF = '_best_match';
+  const bomFirst = ['temperature_2m','relative_humidity_2m','wind_speed_10m','precipitation_probability'];
+  const aliases = { weathercode:['weathercode','weather_code'] };
+  const pickFrom = (obj, key, i) => {
+    const order = bomFirst.includes(key) ? [BOM, DEF, ''] : [DEF, BOM, ''];
+    for(const s of order){
+      for(const k of (aliases[key] || [key])){
+        const v = obj[k + s];
+        const val = (i === undefined) ? v : (Array.isArray(v) ? v[i] : undefined);
+        if(val !== undefined && val !== null) return val;
+      }
+    }
+    return null;
+  };
+  if(!raw.hourly || !raw.current) return null;
+  const out = {
+    utc_offset_seconds: raw.utc_offset_seconds,
+    timezone_abbreviation: raw.timezone_abbreviation,
+    current: { time: raw.current.time },
+    hourly: { time: raw.hourly.time }
+  };
+  ['temperature_2m','weathercode','relative_humidity_2m','wind_speed_10m','is_day'].forEach(k => {
+    out.current[k] = pickFrom(raw.current, k);
+  });
+  ['temperature_2m','weathercode','precipitation_probability','is_day','wind_speed_10m'].forEach(k => {
+    out.hourly[k] = raw.hourly.time.map((_, i) => pickFrom(raw.hourly, k, i));
+  });
+  // if the merge still has no usable current temperature, treat it as a failure
+  if(out.current.temperature_2m === null || out.current.weathercode === null) return null;
+  return out;
+}
+
 async function fetchWeather(city){
-  // Use the Bureau of Meteorology's ACCESS-G model for locations inside Australia
-  // (rough bounding box); everywhere else uses Open-Meteo's default model blend.
+  const base = `https://api.open-meteo.com/v1/forecast?latitude=${city.lat}&longitude=${city.lon}&hourly=temperature_2m,weathercode,precipitation_probability,is_day,wind_speed_10m&current=temperature_2m,weathercode,relative_humidity_2m,wind_speed_10m,is_day&timezone=auto&forecast_days=2`;
   const inAustralia = city.lat < -9 && city.lat > -45 && city.lon > 112 && city.lon < 154;
-  const modelParam = inAustralia ? '&models=bom_access_global' : '';
-  const url = `https://api.open-meteo.com/v1/forecast?latitude=${city.lat}&longitude=${city.lon}&hourly=temperature_2m,weathercode,precipitation_probability,is_day,wind_speed_10m&current=temperature_2m,weathercode,relative_humidity_2m,wind_speed_10m,is_day&timezone=auto&forecast_days=2${modelParam}`;
-  const res = await fetch(url);
+
+  if(inAustralia){
+    try{
+      const res = await fetch(base + '&models=bom_access_global,best_match');
+      if(res.ok){
+        const merged = mergeModels(await res.json());
+        if(merged) return merged;
+      }
+    }catch(e){
+      // fall through to the plain request below
+    }
+  }
+
+  const res = await fetch(base);
   if(!res.ok) throw new Error('Weather fetch failed');
   return res.json();
 }
