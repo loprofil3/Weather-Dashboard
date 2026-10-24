@@ -271,6 +271,13 @@
     color:#6FA8D6;
     margin-top:4px;
   }
+  .hour-mm{
+    font-family:'JetBrains Mono', monospace;
+    font-size:12px;
+    color:#6FA8D6;
+    opacity:0.85;
+    margin-top:2px;
+  }
   .hour-wind{
     font-family:'JetBrains Mono', monospace;
     font-size:14px;
@@ -370,7 +377,7 @@
 <div class="wrap">
   <header>
     <div>
-      <div class="brand-eyebrow">◐ ◐ Weather Dashboard panel</div>
+      <div class="brand-eyebrow">◐ Weather Dashboard panel</div>
       <h1>Sky Strip</h1>
     </div>
     <div class="clock-local" id="fetchedAt"></div>
@@ -492,9 +499,14 @@ let activeSlot = null;
 // blend first for conditions + day/night, with per-value fallback if one is null.
 function mergeModels(raw){
   const BOM = '_bom_access_global', DEF = '_best_match';
-  const bomFirst = ['temperature_2m','relative_humidity_2m','wind_speed_10m','precipitation_probability'];
+  const bomFirst = ['temperature_2m','relative_humidity_2m','wind_speed_10m','precipitation'];
   const aliases = { weathercode:['weathercode','weather_code'] };
   const pickFrom = (obj, key, i) => {
+    // rain chance: take the HIGHER of the models, since each one can run low
+    if(key === 'precipitation_probability' && i !== undefined){
+      const vals = [BOM, DEF, ''].map(s => (obj[key + s] || [])[i]).filter(v => v !== undefined && v !== null);
+      return vals.length ? Math.max(...vals) : null;
+    }
     const order = bomFirst.includes(key) ? [BOM, DEF, ''] : [DEF, BOM, ''];
     for(const s of order){
       for(const k of (aliases[key] || [key])){
@@ -515,7 +527,7 @@ function mergeModels(raw){
   ['temperature_2m','weathercode','relative_humidity_2m','wind_speed_10m','is_day'].forEach(k => {
     out.current[k] = pickFrom(raw.current, k);
   });
-  ['temperature_2m','weathercode','precipitation_probability','is_day','wind_speed_10m'].forEach(k => {
+  ['temperature_2m','weathercode','precipitation','precipitation_probability','is_day','wind_speed_10m'].forEach(k => {
     out.hourly[k] = raw.hourly.time.map((_, i) => pickFrom(raw.hourly, k, i));
   });
   // if the merge still has no usable current temperature, treat it as a failure
@@ -524,7 +536,7 @@ function mergeModels(raw){
 }
 
 async function fetchWeather(city){
-  const base = `https://api.open-meteo.com/v1/forecast?latitude=${city.lat}&longitude=${city.lon}&hourly=temperature_2m,weathercode,precipitation_probability,is_day,wind_speed_10m&current=temperature_2m,weathercode,relative_humidity_2m,wind_speed_10m,is_day&timezone=auto&forecast_days=2`;
+  const base = `https://api.open-meteo.com/v1/forecast?latitude=${city.lat}&longitude=${city.lon}&hourly=temperature_2m,weathercode,precipitation,precipitation_probability,is_day,wind_speed_10m&current=temperature_2m,weathercode,relative_humidity_2m,wind_speed_10m,is_day&timezone=auto&forecast_days=2`;
   const inAustralia = city.lat < -9 && city.lat > -45 && city.lon > 112 && city.lon < 154;
 
   if(inAustralia){
@@ -624,7 +636,8 @@ function renderPanel(slotIndex, city, data){
         <div class="hour-time">${label}</div>
         <div class="hour-icon">${iconFor(data.hourly.weathercode[i], data.hourly.is_day[i])}</div>
         <div class="hour-temp">${Math.round(data.hourly.temperature_2m[i])}°</div>
-        <div class="hour-precip">💧 ${data.hourly.precipitation_probability[i]}%</div>
+        <div class="hour-precip">💧 ${data.hourly.precipitation_probability[i] ?? 0}%</div>
+        <div class="hour-mm">${(data.hourly.precipitation[i] ?? 0).toFixed(1)}mm</div>
         <div class="hour-wind">💨 ${Math.round(data.hourly.wind_speed_10m[i])}</div>
       </div>`;
   }
